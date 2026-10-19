@@ -4,6 +4,10 @@ from pysat.card import CardEnc, EncType
 from pysat.formula import IDPool
 from pysat.solvers import Solver
 
+from threading import Timer
+
+TIMEOUT_SECONDS = 180
+
 class NQueensSequential:
     def __init__(self, n):
         self.n = n
@@ -83,17 +87,36 @@ class NQueensSequential:
             end_loading = perf_counter()
 
             start_solving = perf_counter()
-            satisfiable = solver.solve()
-            end_solving = perf_counter()
+            
+            timer = Timer(
+                TIMEOUT_SECONDS,
+                solver.interrupt
+            )
+            timer.start()
 
-            if not satisfiable:
-                print("No solution found.")
-                print(f"Encoding time: {end_encoding - start_encoding:.6f} seconds")
-                print(f"Loading time: {end_loading - start_loading:.6f} seconds")
+            try:
+                satisfiable = solver.solve_limited(expect_interrupt=True)
+            finally:
+                timer.cancel()
+                solver.clear_interrupt()
+            
+            end_solving = perf_counter()
+            
+            if satisfiable is None:
+                print("Status: TIMEOUT")
+                print(f"Encoding time: {encoding_time:.6f} seconds")
+                print(f"Loading time: {loading_time:.6f} seconds")
                 print(f"Solving time: {end_solving - start_solving:.6f} seconds")
                 print(
-                    f"Total time: {(end_encoding - start_encoding) + (end_loading - start_loading) + (end_solving - start_solving):.6f} seconds"
+                    f"Total time: "
+                    f"{encoding_time + loading_time + (end_solving - start_solving):.6f} seconds"
                 )
+                return None
+            
+            print(f"Status: {'SAT' if satisfiable else 'UNSAT'}")
+            
+            if not satisfiable:
+                print("No solution found.")
                 return None
 
             model = set(

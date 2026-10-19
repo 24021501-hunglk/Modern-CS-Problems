@@ -1,6 +1,10 @@
 from pysat.solvers import Solver
 from time import perf_counter
 
+from threading import Timer
+
+TIMEOUT_SECONDS = 180
+
 class NQueensPairwise:
     def __init__(self, n):
         self.n = n
@@ -89,11 +93,36 @@ class NQueensPairwise:
             end_loading = perf_counter()
 
             start_solving = perf_counter()
-            satisfiable = solver.solve()
-            end_solving = perf_counter()
 
-            if not solver.solve():
-                print("No solution.")
+            timer = Timer(
+                TIMEOUT_SECONDS,
+                solver.interrupt
+            )
+            timer.start()
+
+            try:
+                satisfiable = solver.solve_limited(expect_interrupt=True)
+            finally:
+                timer.cancel()
+                solver.clear_interrupt()
+
+            end_solving = perf_counter()
+            
+            if satisfiable is None:
+                print("Status: TIMEOUT")
+                print(f"Encoding time: {encoding_time:.6f} seconds")
+                print(f"Loading time: {loading_time:.6f} seconds")
+                print(f"Solving time: {end_solving - start_solving:.6f} seconds")
+                print(
+                    f"Total time: "
+                    f"{encoding_time + loading_time + (end_solving - start_solving):.6f} seconds"
+                )
+                return None
+
+            print(f"Status: {'SAT' if satisfiable else 'UNSAT'}")
+            
+            if not satisfiable:
+                print("No solution found.")
                 return None
 
             model = solver.get_model()
