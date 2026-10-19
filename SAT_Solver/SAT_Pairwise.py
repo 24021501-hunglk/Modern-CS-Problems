@@ -75,16 +75,22 @@ class NQueensPairwise:
 
     def solve(self):
 
+        start_encoding = perf_counter()
         clauses = self.build()
-
-        start = perf_counter()
+        end_encoding = perf_counter()
 
         with Solver(name="glucose3") as solver:
+            
+            start_loading = perf_counter()
 
             for clause in clauses:
                 solver.add_clause(clause)
+                
+            end_loading = perf_counter()
 
-            elapsed = perf_counter() - start
+            start_solving = perf_counter()
+            satisfiable = solver.solve()
+            end_solving = perf_counter()
 
             if not solver.solve():
                 print("No solution.")
@@ -110,10 +116,18 @@ class NQueensPairwise:
 
         number_of_variables = self.n * self.n
         number_of_clauses = len(self.clauses)
+        
+        encoding_time = end_encoding - start_encoding
+        loading_time = end_loading - start_loading
+        solving_time = end_solving - start_solving
+        total_time = encoding_time + loading_time + solving_time
 
         print("Number of variables:", number_of_variables)
         print("Number of clauses:", number_of_clauses)
-        print(f"Solve time: {elapsed:.6f} seconds")
+        print(f"Encoding time: {encoding_time:.6f} seconds")
+        print(f"Loading time: {loading_time:.6f} seconds")
+        print(f"Solving time: {solving_time:.6f} seconds")
+        print(f"Total time: {total_time:.6f} seconds")
 
         return board
 

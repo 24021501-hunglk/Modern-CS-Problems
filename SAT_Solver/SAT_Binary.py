@@ -61,24 +61,36 @@ class NQueensBinary:
 
         return self.clauses
 
+    
     def solve(self):
+        start_encoding = perf_counter()
         clauses = self.build()
-        start = perf_counter()
+        end_encoding = perf_counter()
 
         with Solver(name="glucose3") as solver:
+
+            start_loading = perf_counter()
+
             for clause in clauses:
                 solver.add_clause(clause)
 
-            if not solver.solve():
+            end_loading = perf_counter()
+
+            start_solving = perf_counter()
+            satisfiable = solver.solve()
+            end_solving = perf_counter()
+
+            if not satisfiable:
                 print("No solution found.")
+                print(f"Encoding time: {end_encoding - start_encoding:.6f} seconds")
+                print(f"Loading time: {end_loading - start_loading:.6f} seconds")
+                print(f"Solving time: {end_solving - start_solving:.6f} seconds")
                 return None
 
             model = {
                 lit for lit in solver.get_model()
                 if lit > 0
             }
-
-        elapsed = perf_counter() - start
 
         board = []
         for row in range(self.n):
@@ -88,14 +100,27 @@ class NQueensBinary:
             )
             board.append(queen_col)
 
+        number_of_variables = self.n * self.n
+        total_variables = self.vpool.top
+        auxiliary_variables = total_variables - number_of_variables
+
+        encoding_time = end_encoding - start_encoding
+        loading_time = end_loading - start_loading
+        solving_time = end_solving - start_solving
+        total_time = encoding_time + loading_time + solving_time
+
         print(f"N: {self.n}")
-        print(f"Primary variables: {self.n * self.n}")
-        print(f"Total variables: {self.vpool.top}")
-        print(f"Auxiliary variables: {self.vpool.top - self.n * self.n}")
+        print(f"Primary variables: {number_of_variables}")
+        print(f"Total variables: {total_variables}")
+        print(f"Auxiliary variables: {auxiliary_variables}")
         print(f"Clauses: {len(clauses)}")
-        print(f"Solve time: {elapsed:.6f} seconds")
+        print(f"Encoding time: {encoding_time:.6f} seconds")
+        print(f"Loading time: {loading_time:.6f} seconds")
+        print(f"Solving time: {solving_time:.6f} seconds")
+        print(f"Total time: {total_time:.6f} seconds")
 
         return board
+
 
     def print_board(self, board):
         if board is None:
@@ -109,7 +134,7 @@ class NQueensBinary:
 
 
 if __name__ == "__main__":
-    n = 80
+    n = 10
 
     problem = NQueensBinary(n)
     board = problem.solve()
